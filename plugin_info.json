@@ -1,0 +1,27 @@
+{
+  "name": "mr_journal",
+  "version": "1.0.0",
+  "description": "Generic journaling plugin for personal journaling with timestamp and tags support.",
+  "services": [],
+  "commands": [],
+  "routes": [
+    {
+      "path": "/journal/entries/{username}",
+      "method": "GET",
+      "handler": "get_journal_entries"
+    },
+    {
+      "path": "/journal/entry",
+      "method": "POST",
+      "handler": "save_journal_entry"
+    },
+    {
+      "path": "/journal/entry/{entry_id}",
+      "method": "DELETE",
+      "handler": "delete_journal_entry"
+    }
+  ],
+  "inject": {
+    "sidebar": "journal.jinja2"
+  }
+}
