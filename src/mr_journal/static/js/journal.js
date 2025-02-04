@@ -20,7 +20,16 @@ class JournalApp extends BaseEl {
       padding: 15px; 
       font-family: ui-sans-serif, -apple-system, system-ui, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", sans-serif;
     }
-    .container { display: flex; }
+    .container { 
+      display: flex; 
+      gap: 20px;
+      flex-direction: row;
+    }
+    .logo {
+      width: 120px;
+      height: auto;
+      margin-bottom: 15px;
+    }
     .sidebar { 
       width: 30%; 
       border-right: 1px solid #333; 
@@ -56,6 +65,7 @@ class JournalApp extends BaseEl {
       background-color: #101020;
       color: #f0f0f0;
       font-family: inherit;
+      box-sizing: border-box;
     }
     textarea {
       resize: vertical;
@@ -118,6 +128,43 @@ class JournalApp extends BaseEl {
       scrollbar-width: thin;
       scrollbar-color: #333 #101020;
     }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+      }
+      .sidebar, .editor {
+        width: 100%;
+        padding: 0;
+        border-right: none;
+      }
+      .sidebar {
+        border-bottom: 1px solid #333;
+        padding-bottom: 20px;
+        margin-bottom: 20px;
+        max-height: 40vh;
+      }
+      .editor {
+        max-height: 50vh;
+      }
+      .logo {
+        width: 80px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      :host {
+        padding: 10px;
+      }
+      button {
+        width: 100%;
+        margin-bottom: 10px;
+      }
+      .entry {
+        padding: 6px;
+      }
+    }
   `;
 
   constructor() {
@@ -130,6 +177,8 @@ class JournalApp extends BaseEl {
     this.currentTags = [];
     this.currentTimestamp = Date.now();
     this.MAX_CHARS = 2000;
+    this.MAX_TOTAL_PAGES = 30;
+    this.CHARS_PER_PAGE = 2000;
   }
 
   connectedCallback() {
@@ -141,8 +190,10 @@ class JournalApp extends BaseEl {
     try {
       const response = await fetch(`/journal/entries`);
       this.entries = await response.json();
+      this.entries.sort((a, b) => b.timestamp - a.timestamp); // Sort by newest first
       console.log({entries: this.entries});
       this.computeAvailableTags();
+      this.updateSessionData();
     } catch (error) {
       console.error('Failed to load journal entries:', error);
     }
@@ -158,6 +209,40 @@ class JournalApp extends BaseEl {
     this.availableTags = Array.from(tagSet);
   }
 
+  async updateSessionData() {
+    // Sort entries by timestamp (oldest first for chronological order)
+    const sortedEntries = [...this.entries].sort((a, b) => a.timestamp - b.timestamp);
+    
+    // Calculate total characters
+    let totalChars = 0;
+    const selectedEntries = [];
+    
+    // Start from the newest entries and work backwards
+    for (const entry of sortedEntries) {
+      const entryLength = entry.content.length;
+      if (totalChars + entryLength <= this.MAX_TOTAL_PAGES * this.CHARS_PER_PAGE) {
+        selectedEntries.push(entry);
+        totalChars += entryLength;
+      } else {
+        break;
+      }
+    }
+
+    // Format entries for session data
+    const formattedEntries = selectedEntries.map(entry => {
+      return `\n--- Entry ${new Date(entry.timestamp).toLocaleString()} ---\n${entry.content}\n`;
+    }).join('\n');
+
+    // Update session data
+    await fetch('/session_data_update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        journal_entries: formattedEntries
+      })
+    });
+  }
+
   render() {
     const isEditing = Boolean(this._currentEntry);
     const content = isEditing ? this._currentEntry.content : this.currentContent;
@@ -169,6 +254,7 @@ class JournalApp extends BaseEl {
                           remainingChars < 200 ? 'near-limit' : '';
 
     return html`
+      <img src="/home/static/imgs/logo.png" alt="Logo" class="logo">
       <div class="container">
         <div class="sidebar">
           <button class="new-button" @click=${this._newEntry}>New Entry</button>
@@ -193,7 +279,7 @@ class JournalApp extends BaseEl {
             maxlength=${this.MAX_CHARS}
             @input=${this._updateContent}
             .value=${content}
-            placeholder="Write your thoughts here..."></textarea>
+            placeholder="Record personal data here..."></textarea>
           <div class="char-count ${charCountClass}">
             ${remainingChars} characters remaining
           </div>
