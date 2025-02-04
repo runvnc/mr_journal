@@ -1,34 +1,25 @@
 from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import HTMLResponse
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+from lib.templates import render
 import os
 import json
-from lib.templates import render
 from datetime import datetime
 from uuid import uuid4
 
 router = APIRouter()
 
-
-def get_journal_dir(username, timestamp=None):
-    if timestamp is None:
-        now = datetime.now()
-    else:
-        now = datetime.fromtimestamp(timestamp/1000)  # timestamp in ms
-    folder = now.strftime("%Y-%m")
-    path = os.path.join("data", username, "journal", folder)
-    os.makedirs(path, exist_ok=True)
-    return path
-
-@router.get("/journal")
-async def get_journal_page(request: Request):
-    user = request.state.user.username
-    html = await render('journal', {"user": user })
+@router.get("/journal", response_class=HTMLResponse)
+async def journal_page(request: Request):
+    # Use the rendering mechanism from the framework to allow for plugin injection/override
+    user = request.state.user if hasattr(request.state, "user") else {"username": "guest"}
+    html = await render("journal", {"request": request, "user": user})
     return HTMLResponse(html)
 
-@router.get("/journal/entries/{username}")
-async def get_journal_entries(request: Request, username: str):
-    base_dir = os.path.join("data", username, "journal")
+@router.get("/journal/entries", response_class=JSONResponse)
+async def get_journal_entries(request: Request):
+    # Retrieve entries only for the authenticated user
+    user = request.state.user.username if hasattr(request.state, "user") and hasattr(request.state.user, "username") else "guest"
+    base_dir = os.path.join("data", user, "journal")
     entries = []
     if not os.path.exists(base_dir):
         return JSONResponse(entries)
@@ -45,9 +36,9 @@ async def get_journal_entries(request: Request, username: str):
     entries.sort(key=lambda x: x.get("timestamp", 0), reverse=True)
     return JSONResponse(entries)
 
-
-@router.post("/journal/entry")
+@router.post("/journal/entry", response_class=JSONResponse)
 async def save_journal_entry(request: Request):
+    # Save entry for the authenticated user
     user = request.state.user.username if hasattr(request.state, "user") and hasattr(request.state.user, "username") else "guest"
     data = await request.json()
     timestamp = data.get("timestamp", None)
@@ -63,6 +54,14 @@ async def save_journal_entry(request: Request):
         "tags": data.get("tags", []),
         "title": data.get("title", "")
     }
+
+    def get_journal_dir(username, timestamp):
+        now = datetime.fromtimestamp(timestamp / 1000)
+        folder = now.strftime("%Y-%m")
+        path = os.path.join("data", username, "journal", folder)
+        os.makedirs(path, exist_ok=True)
+        return path
+
     dir_path = get_journal_dir(user, timestamp)
     filename = f"entry_{entry_id}.json"
     filepath = os.path.join(dir_path, filename)
@@ -70,8 +69,7 @@ async def save_journal_entry(request: Request):
         json.dump(entry, f)
     return JSONResponse(entry)
 
-
-@router.delete("/journal/entry/{entry_id}")
+@router.delete("/journal/entry/{entry_id}", response_class=JSONResponse)
 async def delete_journal_entry(request: Request, entry_id: str):
     user = request.state.user.username if hasattr(request.state, "user") and hasattr(request.state.user, "username") else "guest"
     base_dir = os.path.join("data", user, "journal")

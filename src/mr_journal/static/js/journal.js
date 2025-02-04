@@ -14,14 +14,29 @@ class JournalApp extends LitElement {
     .editor { width: 70%; padding-left: 10px; }
     .entry { margin-bottom: 10px; padding: 5px; border: 1px solid #fff; border-radius: 3px; cursor: pointer; }
     .entry:hover { background-color: rgba(255,255,255,0.1); }
-    input, textarea { width: 100%; margin: 5px 0; padding: 8px; border: none; border-radius: 3px; }
-    button { padding: 8px 12px; border: none; border-radius: 3px; background-color: #fff; color: #001f3f; cursor: pointer; }
-    datalist option { color: #001f3f; }
+    input, textarea {
+      width: 100%;
+      margin: 5px 0;
+      padding: 8px;
+      border: none;
+      border-radius: 3px;
+    }
+    button {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 3px;
+      background-color: #fff;
+      color: #001f3f;
+      cursor: pointer;
+    }
+    datalist option {
+      color: #001f3f;
+    }
   `;
 
   constructor() {
     super();
-    this.username = '';
+    this.username = window.currentUser || 'guest';
     this.entries = [];
     this.availableTags = [];
     this._currentEntry = null;
@@ -29,13 +44,14 @@ class JournalApp extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.username = window.currentUser || 'guest';
+    // The username is now determined from the server session,
+    // so we don't rely on the attribute for data retrieval
     this.loadEntries();
   }
 
   async loadEntries() {
     try {
-      const response = await fetch(`/journal/entries/${encodeURIComponent(this.username)}`);
+      const response = await fetch(`/journal/entries`);
       this.entries = await response.json();
       this.computeAvailableTags();
     } catch (error) {
@@ -105,7 +121,7 @@ class JournalApp extends LitElement {
 
   _updateTags(e) {
     if (this._currentEntry) {
-      // Split tags on comma, trim whitespace
+      // Split tags on comma or whitespace, trim, and filter out empty strings
       this._currentEntry.tags = e.target.value.split(/,|\s+/).map(tag => tag.trim()).filter(tag => tag !== "");
     }
   }
@@ -140,7 +156,7 @@ class JournalApp extends LitElement {
   }
 
   editEntry(entry) {
-    // Clone the entry so editing doesn't immediately reflect in the list
+    // Clone the entry so editing doesn't immediately affect the list
     this._currentEntry = Object.assign({}, entry);
     this.requestUpdate();
   }
