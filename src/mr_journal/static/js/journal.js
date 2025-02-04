@@ -65,7 +65,7 @@ class JournalApp extends BaseEl {
                           remainingChars < 200 ? 'near-limit' : '';
 
     return html`
-      <img src="/chat/static/imgs/logo.png" alt="Logo" class="logo">
+      <img src="/home/static/imgs/logo.png" alt="Logo" class="logo">
       <div class="container">
         <div class="sidebar">
           <button class="new-button" @click=${this._newEntry}>New Entry</button>

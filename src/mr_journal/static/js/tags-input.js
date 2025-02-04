@@ -1,6 +1,7 @@
 import { LitElement, html, css } from '/chat/static/js/lit-core.min.js';
+import {BaseEl} from '/chat/static/js/base.js'
 
-class TagsInput extends LitElement {
+class TagsInput extends BaseEl {
   static properties = {
     tags: { type: Array },
     suggestions: { type: Array },
