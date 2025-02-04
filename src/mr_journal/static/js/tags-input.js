@@ -15,27 +15,27 @@ class TagsInput extends BaseEl {
       font-family: sans-serif;
     }
     .tags-input-container {
-      border: 1px solid #ccc;
+      border: 1px solid #333;
       padding: 5px;
       border-radius: 4px;
       display: flex;
       flex-wrap: wrap;
       gap: 5px;
-      background: transparent;
+      background: #101020;
       min-height: 38px;
     }
     .tag {
-      background-color: #e0e0e0;
+      background-color: #1a1a1a;
       padding: 5px 10px;
       border-radius: 3px;
       display: flex;
       align-items: center;
       gap: 5px;
-      color: #333;
+      color: #f0f0f0;
     }
     .tag-close {
       cursor: pointer;
-      color: #666;
+      color: #888;
     }
     .tags-input {
       border: none;
@@ -44,27 +44,50 @@ class TagsInput extends BaseEl {
       min-width: 120px;
       padding: 5px;
       background: transparent;
+      color: #f0f0f0 !important;
+      -webkit-text-fill-color: #f0f0f0;
+    }
+    .tags-input::placeholder {
+      color: #666;
+      -webkit-text-fill-color: #666;
     }
     .suggestions {
       position: absolute;
-      border: 1px solid #ccc;
-      background: white;
+      border: 1px solid #333;
+      background: #101020;
       max-height: 150px;
       overflow-y: auto;
       width: 200px;
       display: none;
       z-index: 1000;
-      color: #333;
+      color: #f0f0f0;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
     .suggestion-item {
       padding: 5px 10px;
       cursor: pointer;
     }
     .suggestion-item.selected {
-      background-color: #f0f0f0;
+      background-color: #1a1a1a;
     }
     .suggestion-item:hover {
-      background-color: #f0f0f0;
+      background-color: #1a1a1a;
+    }
+    /* Scrollbar styles */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #101020;
+    }
+    ::-webkit-scrollbar-thumb {
+      background-color: #333;
+      border-radius: 10px;
+      border: 2px solid #101020;
+    }
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: #333 #101020;
     }
   `;
 
