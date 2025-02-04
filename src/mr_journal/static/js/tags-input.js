@@ -21,7 +21,7 @@ class TagsInput extends BaseEl {
       display: flex;
       flex-wrap: wrap;
       gap: 5px;
-      background: #fff;
+      background: transparent;
       min-height: 38px;
     }
     .tag {
