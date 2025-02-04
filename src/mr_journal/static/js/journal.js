@@ -92,7 +92,7 @@ class JournalApp extends BaseEl {
             maxlength=${this.MAX_CHARS}
             @input=${this._updateContent}
             .value=${content}
-            placeholder="Record personal data here..."></textarea>
+          ></textarea>
           <div class="char-count ${charCountClass}">
             ${remainingChars} characters remaining
           </div>
