@@ -1,5 +1,6 @@
-import { LitElement, html, css } from '/chat/static/js/lit-core.min.js';
+import { LitElement, html } from '/chat/static/js/lit-core.min.js';
 import { BaseEl } from '/chat/static/js/base.js';
+import { journalStyles } from './journal-styles.js';
 import './tags-input.js';
 
 class JournalApp extends BaseEl {
@@ -12,160 +13,7 @@ class JournalApp extends BaseEl {
     currentTimestamp: { type: Number }
   };
 
-  static styles = css`
-    :host { 
-      display: block; 
-      background-color: #101020; 
-      color: #f0f0f0; 
-      padding: 15px; 
-      font-family: ui-sans-serif, -apple-system, system-ui, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", sans-serif;
-    }
-    .container { 
-      display: flex; 
-      gap: 20px;
-      flex-direction: row;
-    }
-    .logo {
-      width: 120px;
-      height: auto;
-      margin-bottom: 15px;
-    }
-    .sidebar { 
-      width: 30%; 
-      border-right: 1px solid #333; 
-      padding-right: 10px;
-      overflow-y: auto;
-      max-height: 90vh;
-    }
-    .editor { 
-      width: 70%; 
-      padding-left: 10px;
-      overflow-y: auto;
-      max-height: 90vh;
-    }
-    .entry { 
-      margin-bottom: 10px; 
-      padding: 8px; 
-      border: 1px solid #333; 
-      border-radius: 8px; 
-      cursor: pointer;
-      background-color: #1a1a1a;
-      transition: all 0.2s ease;
-    }
-    .entry:hover { 
-      background-color: #2d3748;
-      transform: translateX(2px);
-    }
-    input, textarea {
-      width: 100%;
-      margin: 5px 0;
-      padding: 10px;
-      border: 1px solid #333;
-      border-radius: 8px;
-      background-color: #101020;
-      color: #f0f0f0;
-      font-family: inherit;
-      box-sizing: border-box;
-    }
-    textarea {
-      resize: vertical;
-      min-height: 150px;
-    }
-    button {
-      background: linear-gradient(145deg, #4a5eff, #2e41e3);
-      color: white;
-      padding: 10px 20px;
-      border-radius: 8px;
-      border: none;
-      font-weight: 500;
-      cursor: pointer;
-      margin-right: 8px;
-      transition: all 0.2s ease-in-out;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    }
-    button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-      background: linear-gradient(145deg, #5a6eff, #3e51f3);
-    }
-    .new-button {
-      background: linear-gradient(145deg, #4CAF50, #45a049);
-      color: white;
-      font-weight: bold;
-      margin-bottom: 15px;
-      width: 100%;
-    }
-    .new-button:hover {
-      background: linear-gradient(145deg, #5dbf61, #4caf50);
-    }
-    .char-count {
-      font-size: 0.8em;
-      color: #aaa;
-      margin-top: 4px;
-    }
-    .char-count.near-limit {
-      color: #ffaa00;
-    }
-    .char-count.at-limit {
-      color: #ff4444;
-    }
-    tags-input {
-      margin: 5px 0;
-    }
-    /* Scrollbar styles */
-    ::-webkit-scrollbar {
-      width: 8px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #101020;
-    }
-    ::-webkit-scrollbar-thumb {
-      background-color: #333;
-      border-radius: 10px;
-      border: 2px solid #101020;
-    }
-    * {
-      scrollbar-width: thin;
-      scrollbar-color: #333 #101020;
-    }
-
-    /* Responsive Design */
-    @media (max-width: 768px) {
-      .container {
-        flex-direction: column;
-      }
-      .sidebar, .editor {
-        width: 100%;
-        padding: 0;
-        border-right: none;
-      }
-      .sidebar {
-        border-bottom: 1px solid #333;
-        padding-bottom: 20px;
-        margin-bottom: 20px;
-        max-height: 40vh;
-      }
-      .editor {
-        max-height: 50vh;
-      }
-      .logo {
-        width: 80px;
-      }
-    }
-
-    @media (max-width: 480px) {
-      :host {
-        padding: 10px;
-      }
-      button {
-        width: 100%;
-        margin-bottom: 10px;
-      }
-      .entry {
-        padding: 6px;
-      }
-    }
-  `;
+  static styles = journalStyles;
 
   constructor() {
     super();
@@ -177,8 +25,6 @@ class JournalApp extends BaseEl {
     this.currentTags = [];
     this.currentTimestamp = Date.now();
     this.MAX_CHARS = 2000;
-    this.MAX_TOTAL_PAGES = 30;
-    this.CHARS_PER_PAGE = 2000;
   }
 
   connectedCallback() {
@@ -193,7 +39,6 @@ class JournalApp extends BaseEl {
       this.entries.sort((a, b) => b.timestamp - a.timestamp); // Sort by newest first
       console.log({entries: this.entries});
       this.computeAvailableTags();
-      this.updateSessionData();
     } catch (error) {
       console.error('Failed to load journal entries:', error);
     }
@@ -209,40 +54,6 @@ class JournalApp extends BaseEl {
     this.availableTags = Array.from(tagSet);
   }
 
-  async updateSessionData() {
-    // Sort entries by timestamp (oldest first for chronological order)
-    const sortedEntries = [...this.entries].sort((a, b) => a.timestamp - b.timestamp);
-    
-    // Calculate total characters
-    let totalChars = 0;
-    const selectedEntries = [];
-    
-    // Start from the newest entries and work backwards
-    for (const entry of sortedEntries) {
-      const entryLength = entry.content.length;
-      if (totalChars + entryLength <= this.MAX_TOTAL_PAGES * this.CHARS_PER_PAGE) {
-        selectedEntries.push(entry);
-        totalChars += entryLength;
-      } else {
-        break;
-      }
-    }
-
-    // Format entries for session data
-    const formattedEntries = selectedEntries.map(entry => {
-      return `\n--- Entry ${new Date(entry.timestamp).toLocaleString()} ---\n${entry.content}\n`;
-    }).join('\n');
-
-    // Update session data
-    await fetch('/session_data_update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        journal_entries: formattedEntries
-      })
-    });
-  }
-
   render() {
     const isEditing = Boolean(this._currentEntry);
     const content = isEditing ? this._currentEntry.content : this.currentContent;
@@ -254,18 +65,20 @@ class JournalApp extends BaseEl {
                           remainingChars < 200 ? 'near-limit' : '';
 
     return html`
-      <img src="/home/static/imgs/logo.png" alt="Logo" class="logo">
+      <img src="/chat/static/imgs/logo.png" alt="Logo" class="logo">
       <div class="container">
         <div class="sidebar">
           <button class="new-button" @click=${this._newEntry}>New Entry</button>
-          <h3>Your Entries</h3>
-          ${this.entries.map(entry => html`
-            <div class="entry" @click=${() => this.editEntry(entry)}>
-              <strong>${entry.title || 'Untitled'}</strong><br>
-              <span>${new Date(entry.timestamp).toLocaleString()}</span>
-              ${entry.tags.length ? html`<br><small>${entry.tags.join(', ')}</small>` : ''}
-            </div>
-          `)}
+          <div class="entries-list">
+            <h3>Your Entries</h3>
+            ${this.entries.map(entry => html`
+              <div class="entry" @click=${() => this.editEntry(entry)}>
+                <strong>${entry.title || 'Untitled'}</strong><br>
+                <span>${new Date(entry.timestamp).toLocaleString()}</span>
+                ${entry.tags.length ? html`<br><small>${entry.tags.join(', ')}</small>` : ''}
+              </div>
+            `)}
+          </div>
         </div>
         <div class="editor">
           <h3>${isEditing ? 'Edit Entry' : 'New Entry'}</h3>
