@@ -3,7 +3,8 @@ import { LitElement, html, css } from '/chat/static/js/lit-core.min.js';
 class JournalApp extends LitElement {
   static properties = {
     username: { type: String },
-    entries: { type: Array }
+    entries: { type: Array },
+    availableTags: { type: Array }
   };
 
   static styles = css`
@@ -15,12 +16,14 @@ class JournalApp extends LitElement {
     .entry:hover { background-color: rgba(255,255,255,0.1); }
     input, textarea { width: 100%; margin: 5px 0; padding: 8px; border: none; border-radius: 3px; }
     button { padding: 8px 12px; border: none; border-radius: 3px; background-color: #fff; color: #001f3f; cursor: pointer; }
+    datalist option { color: #001f3f; }
   `;
 
   constructor() {
     super();
     this.username = '';
     this.entries = [];
+    this.availableTags = [];
     this._currentEntry = null;
   }
 
@@ -34,9 +37,20 @@ class JournalApp extends LitElement {
     try {
       const response = await fetch(`/journal/entries/${encodeURIComponent(this.username)}`);
       this.entries = await response.json();
+      this.computeAvailableTags();
     } catch (error) {
       console.error('Failed to load journal entries:', error);
     }
+  }
+
+  computeAvailableTags() {
+    const tagSet = new Set();
+    this.entries.forEach(entry => {
+      if (entry.tags && Array.isArray(entry.tags)) {
+        entry.tags.forEach(tag => tagSet.add(tag));
+      }
+    });
+    this.availableTags = Array.from(tagSet);
   }
 
   render() {
@@ -60,7 +74,10 @@ class JournalApp extends LitElement {
           <textarea rows="10" @input=${this._updateContent}>${this._currentEntry ? this._currentEntry.content : ''}</textarea>
           
           <label>Tags (comma separated):</label>
-          <input type="text" .value=${this._currentEntry ? this._currentEntry.tags.join(', ') : ''} @input=${this._updateTags}>
+          <input type="text" list="tag-options" .value=${this._currentEntry ? this._currentEntry.tags.join(', ') : ''} @input=${this._updateTags}>
+          <datalist id="tag-options">
+            ${this.availableTags.map(tag => html`<option value="${tag}"></option>`)}
+          </datalist>
           
           <button @click=${this._saveEntry}>Save</button>
           ${this._currentEntry ? html`<button @click=${this._deleteEntry}>Delete</button>` : ''}
@@ -71,7 +88,7 @@ class JournalApp extends LitElement {
 
   _formatTimestamp(ts) {
     const date = new Date(ts);
-    return date.toISOString().slice(0,16);
+    return date.toISOString().slice(0, 16);
   }
 
   _updateTimestamp(e) {
@@ -88,13 +105,14 @@ class JournalApp extends LitElement {
 
   _updateTags(e) {
     if (this._currentEntry) {
-      this._currentEntry.tags = e.target.value.split(',').map(tag => tag.trim());
+      // Split tags on comma, trim whitespace
+      this._currentEntry.tags = e.target.value.split(/,|\s+/).map(tag => tag.trim()).filter(tag => tag !== "");
     }
   }
 
   async _saveEntry() {
     const entry = this._currentEntry || { content: '', timestamp: Date.now(), tags: [], title: '' };
-    entry.title = entry.content.substring(0,20);
+    entry.title = entry.content.substring(0, 20);
     try {
       const response = await fetch('/journal/entry', {
         method: 'POST',
@@ -104,7 +122,7 @@ class JournalApp extends LitElement {
       const saved = await response.json();
       console.log('Saved entry:', saved);
       this._currentEntry = null;
-      this.loadEntries();
+      await this.loadEntries();
     } catch (error) {
       console.error('Error saving entry', error);
     }
@@ -115,13 +133,14 @@ class JournalApp extends LitElement {
     try {
       await fetch(`/journal/entry/${this._currentEntry.id}`, { method: 'DELETE' });
       this._currentEntry = null;
-      this.loadEntries();
+      await this.loadEntries();
     } catch (error) {
       console.error('Failed to delete entry:', error);
     }
   }
 
   editEntry(entry) {
+    // Clone the entry so editing doesn't immediately reflect in the list
     this._currentEntry = Object.assign({}, entry);
     this.requestUpdate();
   }
