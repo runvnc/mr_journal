@@ -2,11 +2,14 @@ import { LitElement, html, css } from '/chat/static/js/lit-core.min.js';
 import { BaseEl } from '/chat/static/js/base.js';
 import './tags-input.js';
 
-class JournalApp extends LitElement {
+class JournalApp extends BaseEl {
   static properties = {
     username: { type: String },
     entries: { type: Array },
-    availableTags: { type: Array }
+    availableTags: { type: Array },
+    currentContent: { type: String },
+    currentTags: { type: Array },
+    currentTimestamp: { type: Number }
   };
 
   static styles = css`
@@ -32,6 +35,23 @@ class JournalApp extends LitElement {
       cursor: pointer;
       margin-right: 8px;
     }
+    .new-button {
+      background-color: #4CAF50;
+      color: white;
+      font-weight: bold;
+      margin-bottom: 15px;
+    }
+    .char-count {
+      font-size: 0.8em;
+      color: #aaa;
+      margin-top: 4px;
+    }
+    .char-count.near-limit {
+      color: #ffaa00;
+    }
+    .char-count.at-limit {
+      color: #ff4444;
+    }
     tags-input {
       margin: 5px 0;
     }
@@ -43,6 +63,10 @@ class JournalApp extends LitElement {
     this.entries = [];
     this.availableTags = [];
     this._currentEntry = null;
+    this.currentContent = '';
+    this.currentTags = [];
+    this.currentTimestamp = Date.now();
+    this.MAX_CHARS = 2000; // About 1 page of text
   }
 
   connectedCallback() {
@@ -72,9 +96,19 @@ class JournalApp extends LitElement {
   }
 
   render() {
+    const isEditing = Boolean(this._currentEntry);
+    const content = isEditing ? this._currentEntry.content : this.currentContent;
+    const tags = isEditing ? this._currentEntry.tags : this.currentTags;
+    const timestamp = isEditing ? this._currentEntry.timestamp : this.currentTimestamp;
+    const charCount = content.length;
+    const remainingChars = this.MAX_CHARS - charCount;
+    const charCountClass = remainingChars < 100 ? 'at-limit' : 
+                          remainingChars < 200 ? 'near-limit' : '';
+
     return html`
       <div class="container">
         <div class="sidebar">
+          <button class="new-button" @click=${this._newEntry}>New Entry</button>
           <h3>Your Entries</h3>
           ${this.entries.map(entry => html`
             <div class="entry" @click=${() => this.editEntry(entry)}>
@@ -84,26 +118,30 @@ class JournalApp extends LitElement {
           `)}
         </div>
         <div class="editor">
-          <h3>${this._currentEntry ? 'Edit Entry' : 'New Entry'}</h3>
+          <h3>${isEditing ? 'Edit Entry' : 'New Entry'}</h3>
           <label>Timestamp:</label>
           <input type="datetime-local" 
-                 .value=${this._formatTimestamp(this._currentEntry ? this._currentEntry.timestamp : Date.now())} 
+                 .value=${this._formatTimestamp(timestamp)} 
                  @change=${this._updateTimestamp}>
   
           <label>Content:</label>
           <textarea rows="10" 
+                    maxlength=${this.MAX_CHARS}
                     @input=${this._updateContent}
-                    .value=${this._currentEntry ? this._currentEntry.content : ''}></textarea>
+                    .value=${content}></textarea>
+          <div class="char-count ${charCountClass}">
+            ${remainingChars} characters remaining
+          </div>
           
           <label>Tags:</label>
           <tags-input
-            .tags=${this._currentEntry ? this._currentEntry.tags : []}
+            .tags=${tags}
             .suggestions=${this.availableTags}
             @tags-changed=${this._updateTags}
           ></tags-input>
           
           <button @click=${this._saveEntry}>Save</button>
-          ${this._currentEntry ? html`<button @click=${this._deleteEntry}>Delete</button>` : ''}
+          ${isEditing ? html`<button @click=${this._deleteEntry}>Delete</button>` : ''}
         </div>
       </div>
     `;
@@ -115,31 +153,52 @@ class JournalApp extends LitElement {
   }
 
   _updateTimestamp(e) {
+    const timestamp = new Date(e.target.value).getTime();
     if (this._currentEntry) {
-      this._currentEntry.timestamp = new Date(e.target.value).getTime();
+      this._currentEntry.timestamp = timestamp;
+    } else {
+      this.currentTimestamp = timestamp;
     }
   }
 
   _updateContent(e) {
+    const newContent = e.target.value.slice(0, this.MAX_CHARS);
     if (this._currentEntry) {
-      this._currentEntry.content = e.target.value;
+      this._currentEntry.content = newContent;
+    } else {
+      this.currentContent = newContent;
     }
+    this.requestUpdate();
   }
 
   _updateTags(e) {
     if (this._currentEntry) {
       this._currentEntry.tags = e.detail.tags;
+    } else {
+      this.currentTags = e.detail.tags;
     }
+  }
+
+  _newEntry() {
+    this._currentEntry = null;
+    this.currentContent = '';
+    this.currentTags = [];
+    this.currentTimestamp = Date.now();
+    this.requestUpdate();
   }
 
   async _saveEntry() {
     const entry = this._currentEntry || { 
-      content: '', 
-      timestamp: Date.now(), 
-      tags: [], 
-      title: '' 
+      content: this.currentContent, 
+      timestamp: this.currentTimestamp, 
+      tags: this.currentTags,
+      title: this.currentContent.substring(0, 20) || 'Untitled'
     };
-    entry.title = entry.content.substring(0, 20);
+
+    if (this._currentEntry) {
+      entry.title = entry.content.substring(0, 20) || 'Untitled';
+    }
+
     try {
       const response = await fetch('/journal/entry', {
         method: 'POST',
@@ -149,6 +208,9 @@ class JournalApp extends LitElement {
       const saved = await response.json();
       console.log('Saved entry:', saved);
       this._currentEntry = null;
+      this.currentContent = '';
+      this.currentTags = [];
+      this.currentTimestamp = Date.now();
       await this.loadEntries();
     } catch (error) {
       console.error('Error saving entry', error);
@@ -160,6 +222,9 @@ class JournalApp extends LitElement {
     try {
       await fetch(`/journal/entry/${this._currentEntry.id}`, { method: 'DELETE' });
       this._currentEntry = null;
+      this.currentContent = '';
+      this.currentTags = [];
+      this.currentTimestamp = Date.now();
       await this.loadEntries();
     } catch (error) {
       console.error('Failed to delete entry:', error);
