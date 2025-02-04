@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import HTMLReponse
+from fastapi.responses import HTMLResponse
 from fastapi.responses import JSONResponse
 import os
 import json
@@ -24,7 +24,7 @@ def get_journal_dir(username, timestamp=None):
 async def get_journal_page(request: Request):
     user = request.state.user.username
     html = await render('journal', {"user": user })
-    return HTMLReponse(html)
+    return HTMLResponse(html)
 
 @router.get("/journal/entries/{username}")
 async def get_journal_entries(request: Request, username: str):
