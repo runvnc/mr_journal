@@ -1,5 +1,6 @@
 import { LitElement, html, css } from '/chat/static/js/lit-core.min.js';
-import {BaseEl} from '/chat/static/js/base.js'
+import { BaseEl } from '/chat/static/js/base.js';
+import './tags-input.js';
 
 class JournalApp extends LitElement {
   static properties = {
@@ -29,9 +30,10 @@ class JournalApp extends LitElement {
       background-color: #fff;
       color: #001f3f;
       cursor: pointer;
+      margin-right: 8px;
     }
-    datalist option {
-      color: #001f3f;
+    tags-input {
+      margin: 5px 0;
     }
   `;
 
@@ -45,8 +47,6 @@ class JournalApp extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    // The username is now determined from the server session,
-    // so we don't rely on the attribute for data retrieval
     this.loadEntries();
   }
 
@@ -54,7 +54,7 @@ class JournalApp extends LitElement {
     try {
       const response = await fetch(`/journal/entries`);
       this.entries = await response.json();
-      console.log({entries: this.entries})
+      console.log({entries: this.entries});
       this.computeAvailableTags();
     } catch (error) {
       console.error('Failed to load journal entries:', error);
@@ -86,16 +86,21 @@ class JournalApp extends LitElement {
         <div class="editor">
           <h3>${this._currentEntry ? 'Edit Entry' : 'New Entry'}</h3>
           <label>Timestamp:</label>
-          <input type="datetime-local" .value=${this._formatTimestamp(this._currentEntry ? this._currentEntry.timestamp : Date.now())} @change=${this._updateTimestamp}>
+          <input type="datetime-local" 
+                 .value=${this._formatTimestamp(this._currentEntry ? this._currentEntry.timestamp : Date.now())} 
+                 @change=${this._updateTimestamp}>
   
           <label>Content:</label>
-          <textarea rows="10" @input=${this._updateContent}>${this._currentEntry ? this._currentEntry.content : ''}</textarea>
+          <textarea rows="10" 
+                    @input=${this._updateContent}
+                    .value=${this._currentEntry ? this._currentEntry.content : ''}></textarea>
           
-          <label>Tags (comma separated):</label>
-          <input type="text" list="tag-options" .value=${this._currentEntry ? this._currentEntry.tags.join(', ') : ''} @input=${this._updateTags}>
-          <datalist id="tag-options">
-            ${this.availableTags.map(tag => html`<option value="${tag}"></option>`)}
-          </datalist>
+          <label>Tags:</label>
+          <tags-input
+            .tags=${this._currentEntry ? this._currentEntry.tags : []}
+            .suggestions=${this.availableTags}
+            @tags-changed=${this._updateTags}
+          ></tags-input>
           
           <button @click=${this._saveEntry}>Save</button>
           ${this._currentEntry ? html`<button @click=${this._deleteEntry}>Delete</button>` : ''}
@@ -123,13 +128,17 @@ class JournalApp extends LitElement {
 
   _updateTags(e) {
     if (this._currentEntry) {
-      // Split tags on comma or whitespace, trim, and filter out empty strings
-      this._currentEntry.tags = e.target.value.split(/,|\s+/).map(tag => tag.trim()).filter(tag => tag !== "");
+      this._currentEntry.tags = e.detail.tags;
     }
   }
 
   async _saveEntry() {
-    const entry = this._currentEntry || { content: '', timestamp: Date.now(), tags: [], title: '' };
+    const entry = this._currentEntry || { 
+      content: '', 
+      timestamp: Date.now(), 
+      tags: [], 
+      title: '' 
+    };
     entry.title = entry.content.substring(0, 20);
     try {
       const response = await fetch('/journal/entry', {
@@ -158,7 +167,6 @@ class JournalApp extends LitElement {
   }
 
   editEntry(entry) {
-    // Clone the entry so editing doesn't immediately affect the list
     this._currentEntry = Object.assign({}, entry);
     this.requestUpdate();
   }
