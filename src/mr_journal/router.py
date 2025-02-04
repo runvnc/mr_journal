@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import JSONResponse
 import os
 import json
+from lib.templates import render
 from datetime import datetime
 from uuid import uuid4
 
@@ -18,6 +19,11 @@ def get_journal_dir(username, timestamp=None):
     os.makedirs(path, exist_ok=True)
     return path
 
+@router.get("/journal")
+async def get_journal_page(request: Request):
+    user = request.state.user.username
+    html = await render('journal', {"user": user })
+    return html
 
 @router.get("/journal/entries/{username}")
 async def get_journal_entries(request: Request, username: str):
