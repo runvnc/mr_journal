@@ -13,33 +13,80 @@ class JournalApp extends BaseEl {
   };
 
   static styles = css`
-    :host { display: block; background-color: #001f3f; color: #fff; padding: 15px; font-family: sans-serif; }
+    :host { 
+      display: block; 
+      background-color: #101020; 
+      color: #f0f0f0; 
+      padding: 15px; 
+      font-family: ui-sans-serif, -apple-system, system-ui, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", sans-serif;
+    }
     .container { display: flex; }
-    .sidebar { width: 30%; border-right: 1px solid #fff; padding-right: 10px; }
-    .editor { width: 70%; padding-left: 10px; }
-    .entry { margin-bottom: 10px; padding: 5px; border: 1px solid #fff; border-radius: 3px; cursor: pointer; }
-    .entry:hover { background-color: rgba(255,255,255,0.1); }
+    .sidebar { 
+      width: 30%; 
+      border-right: 1px solid #333; 
+      padding-right: 10px;
+      overflow-y: auto;
+      max-height: 90vh;
+    }
+    .editor { 
+      width: 70%; 
+      padding-left: 10px;
+      overflow-y: auto;
+      max-height: 90vh;
+    }
+    .entry { 
+      margin-bottom: 10px; 
+      padding: 8px; 
+      border: 1px solid #333; 
+      border-radius: 8px; 
+      cursor: pointer;
+      background-color: #1a1a1a;
+      transition: all 0.2s ease;
+    }
+    .entry:hover { 
+      background-color: #2d3748;
+      transform: translateX(2px);
+    }
     input, textarea {
       width: 100%;
       margin: 5px 0;
-      padding: 8px;
-      border: none;
-      border-radius: 3px;
+      padding: 10px;
+      border: 1px solid #333;
+      border-radius: 8px;
+      background-color: #101020;
+      color: #f0f0f0;
+      font-family: inherit;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 150px;
     }
     button {
-      padding: 8px 12px;
+      background: linear-gradient(145deg, #4a5eff, #2e41e3);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
       border: none;
-      border-radius: 3px;
-      background-color: #fff;
-      color: #001f3f;
+      font-weight: 500;
       cursor: pointer;
       margin-right: 8px;
+      transition: all 0.2s ease-in-out;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      background: linear-gradient(145deg, #5a6eff, #3e51f3);
     }
     .new-button {
-      background-color: #4CAF50;
+      background: linear-gradient(145deg, #4CAF50, #45a049);
       color: white;
       font-weight: bold;
       margin-bottom: 15px;
+      width: 100%;
+    }
+    .new-button:hover {
+      background: linear-gradient(145deg, #5dbf61, #4caf50);
     }
     .char-count {
       font-size: 0.8em;
@@ -55,6 +102,22 @@ class JournalApp extends BaseEl {
     tags-input {
       margin: 5px 0;
     }
+    /* Scrollbar styles */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #101020;
+    }
+    ::-webkit-scrollbar-thumb {
+      background-color: #333;
+      border-radius: 10px;
+      border: 2px solid #101020;
+    }
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: #333 #101020;
+    }
   `;
 
   constructor() {
@@ -66,7 +129,7 @@ class JournalApp extends BaseEl {
     this.currentContent = '';
     this.currentTags = [];
     this.currentTimestamp = Date.now();
-    this.MAX_CHARS = 2000; // About 1 page of text
+    this.MAX_CHARS = 2000;
   }
 
   connectedCallback() {
@@ -114,6 +177,7 @@ class JournalApp extends BaseEl {
             <div class="entry" @click=${() => this.editEntry(entry)}>
               <strong>${entry.title || 'Untitled'}</strong><br>
               <span>${new Date(entry.timestamp).toLocaleString()}</span>
+              ${entry.tags.length ? html`<br><small>${entry.tags.join(', ')}</small>` : ''}
             </div>
           `)}
         </div>
@@ -125,10 +189,11 @@ class JournalApp extends BaseEl {
                  @change=${this._updateTimestamp}>
   
           <label>Content:</label>
-          <textarea rows="10" 
-                    maxlength=${this.MAX_CHARS}
-                    @input=${this._updateContent}
-                    .value=${content}></textarea>
+          <textarea 
+            maxlength=${this.MAX_CHARS}
+            @input=${this._updateContent}
+            .value=${content}
+            placeholder="Write your thoughts here..."></textarea>
           <div class="char-count ${charCountClass}">
             ${remainingChars} characters remaining
           </div>
