@@ -1,4 +1,5 @@
 import { LitElement, html, css } from '/chat/static/js/lit-core.min.js';
+import {BaseEl} from '/chat/static/js/base.js'
 
 class JournalApp extends LitElement {
   static properties = {
@@ -53,6 +54,7 @@ class JournalApp extends LitElement {
     try {
       const response = await fetch(`/journal/entries`);
       this.entries = await response.json();
+      console.log({entries: this.entries})
       this.computeAvailableTags();
     } catch (error) {
       console.error('Failed to load journal entries:', error);
