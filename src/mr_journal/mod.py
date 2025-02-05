@@ -1,26 +1,6 @@
 from lib.pipelines.pipe import pipe
-from datetime import datetime
-
-def format_journal_entries(entries) -> str:
-    # Sort entries by timestamp (oldest first for chronological order)
-    sorted_entries = sorted(entries, key=lambda x: x['timestamp'])
-    
-    # Calculate total characters and select entries within limit
-    MAX_CHARS = 60000  # About 30 pages
-    total_chars = 0
-    selected_entries = []
-    
-    for entry in sorted_entries:
-        entry_text = f"\n--- Journal Entry {datetime.fromtimestamp(entry['timestamp']/1000).strftime('%Y-%m-%d %H:%M:%S')} ---\n{entry['content']}\n"
-        entry_chars = len(entry_text)
-        
-        if total_chars + entry_chars <= MAX_CHARS:
-            selected_entries.append(entry_text)
-            total_chars += entry_chars
-        else:
-            break
-    
-    return "\n\n### Journal Entries ###\n" + ''.join(selected_entries) if selected_entries else ""
+from .utils.journal_utils import get_journal_entries, format_journal_entries
+from loguru import logger
 
 @pipe(name='filter_messages', priority=5)
 def add_journal_entries(data: dict, context=None) -> dict:
@@ -30,14 +10,18 @@ def add_journal_entries(data: dict, context=None) -> dict:
     """
     try:
         if not data.get('messages') or len(data['messages']) == 0:
+            logger.warning("No messages found in data for adding journal entries")
             return None
 
-        # Get journal entries from the context
-        if not hasattr(context, 'journal_entries'):
+        # Get username from context
+        if not hasattr(context, 'username'):
+            logger.warning("No username found in context for journal entries")
             return None
-
-        entries = context.journal_entries
+            
+        # Get journal entries using the utility function
+        entries = get_journal_entries(context.username)
         if not entries:
+            logger.info(f"No journal entries found for user {context.username}")
             return None
 
         # Format entries and add to first message
@@ -50,9 +34,11 @@ def add_journal_entries(data: dict, context=None) -> dict:
                 first_msg['content']['text'] = first_msg['content']['text'] + formatted_entries
             elif isinstance(first_msg.get('content'), list):
                 first_msg['content'].append({"type": "text", "text": formatted_entries})
+            else:
+                logger.warning(f"Unexpected message content format: {type(first_msg.get('content'))}")
 
         return None
 
     except Exception as e:
-        print(f"Error in add_journal_entries pipe: {str(e)}")
+        logger.error(f"Error in add_journal_entries pipe: {str(e)}")
         return None
