@@ -1,15 +1,15 @@
 import os
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Dict, Optional
 from loguru import logger
 from uuid import uuid4
 
 def get_journal_dir(username: str, timestamp: Optional[int] = None) -> str:
     if timestamp is None:
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
     else:
-        now = datetime.fromtimestamp(timestamp/1000)  # timestamp in ms
+        now = datetime.fromtimestamp(timestamp/1000, timezone.utc)  # timestamp in ms
     folder = now.strftime("%Y-%m")
     path = os.path.join("data", username, "journal", folder)
     os.makedirs(path, exist_ok=True)
@@ -39,7 +39,7 @@ def get_journal_entries(username: str) -> List[Dict]:
 def save_journal_entry(username: str, data: Dict) -> Dict:
     timestamp = data.get("timestamp", None)
     if timestamp is None:
-        timestamp = int(datetime.now().timestamp() * 1000)
+        timestamp = int(datetime.now(timezone.utc).timestamp() * 1000)
     else:
         timestamp = int(timestamp)
     
@@ -90,7 +90,7 @@ def format_journal_entries(entries: List[Dict]) -> str:
     selected_entries = []
     
     for entry in sorted_entries:
-        entry_text = f"\n--- Journal Entry {datetime.fromtimestamp(entry['timestamp']/1000).strftime('%Y-%m-%d %H:%M:%S')} ---\n{entry['content']}\n"
+        entry_text = f"\n--- Journal Entry {datetime.fromtimestamp(entry['timestamp']/1000, timezone.utc).strftime('%Y-%m-%d %H:%M:%S %Z')} ---\n{entry['content']}\n"
         entry_chars = len(entry_text)
         
         if total_chars + entry_chars <= MAX_CHARS:
