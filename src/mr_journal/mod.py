@@ -32,6 +32,7 @@ async def add_journal_entries(data: dict, context=None) -> dict:
             print(6) 
             first_msg = data['messages'][0]
             print(7)
+            print(first_msg)
             if isinstance(first_msg.get('content'), str):
                 first_msg['content'] = first_msg['content'] + formatted_entries
             elif isinstance(first_msg.get('content'), dict) and first_msg['content'].get('type') == 'text':
