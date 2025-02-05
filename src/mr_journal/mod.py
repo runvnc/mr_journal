@@ -45,7 +45,7 @@ async def add_journal_entries(data: dict, context=None) -> dict:
             else:
                 logger.warning(f"Unexpected message content format: {type(first_msg.get('content'))}")
         print("X1")
-        return None
+        return data
 
     except Exception as e:
         logger.error(f"Error in add_journal_entries pipe: {str(e)}")
