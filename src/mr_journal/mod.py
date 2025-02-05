@@ -29,19 +29,22 @@ async def add_journal_entries(data: dict, context=None) -> dict:
         formatted_entries = format_journal_entries(entries)
         print(5)
         if formatted_entries:
-            print(6) 
+            print(6)
             first_msg = data['messages'][0]
             print(7)
             print(first_msg)
             if isinstance(first_msg.get('content'), str):
+                print(8)
                 first_msg['content'] = first_msg['content'] + formatted_entries
             elif isinstance(first_msg.get('content'), dict) and first_msg['content'].get('type') == 'text':
+                print(9)
                 first_msg['content']['text'] = first_msg['content']['text'] + formatted_entries
             elif isinstance(first_msg.get('content'), list):
+                print(10)
                 first_msg['content'].append({"type": "text", "text": formatted_entries})
             else:
                 logger.warning(f"Unexpected message content format: {type(first_msg.get('content'))}")
-
+        print("X1")
         return None
 
     except Exception as e:
